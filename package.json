@@ -1,0 +1,22 @@
+{
+  "name": "similar-web-reporter",
+  "version": "1.0.0",
+  "description": "Add-on for better reporting using SimilarWeb Api.",
+  "scripts": {
+    "test": "jasmine-node spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kopz9999/similar-web-reporter"
+  },
+  "keywords": [
+    "SimilarWeb",
+    "Goolge Apps Script"
+  ],
+  "author": "kopz9999",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kopz9999/similar-web-reporter/issues"
+  },
+  "homepage": "https://github.com/kopz9999/similar-web-reporter"
+}
