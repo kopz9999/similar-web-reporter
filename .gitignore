@@ -28,3 +28,6 @@ node_modules
 
 # Test Files
 fixtures/sandbox-files/*
+
+# tmp
+tmp

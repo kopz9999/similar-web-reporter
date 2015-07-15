@@ -1,0 +1,57 @@
+{
+    "Data": [
+        {
+            "Site": "drudgereport.com",
+            "Visits": 0.12102778215374196,
+            "Change": 0.20817320969507458
+        },
+        {
+            "Site": "huffingtonpost.com",
+            "Visits": 0.04412766194211349,
+            "Change": 0.875562442614034
+        },
+        {
+            "Site": "fark.com",
+            "Visits": 0.04296483395563621,
+            "Change": 0.0593148298046419
+        },
+        {
+            "Site": "click.cpvrdr.com",
+            "Visits": 0.03449117046602311,
+            "Change": -0.15127808941181362
+        },
+        {
+            "Site": "traffic.outbrain.com",
+            "Visits": 0.03212044086176051,
+            "Change": -0.11815101185957996
+        },
+        {
+            "Site": "politicalticker.blogs.cnn.com",
+            "Visits": 0.030689056156477785,
+            "Change": -0.22666722063915037
+        },
+        {
+            "Site": "www-ig-opensocial.googleusercontent.com",
+            "Visits": 0.02955112618194962,
+            "Change": null
+        },
+        {
+            "Site": "money.cnn.com",
+            "Visits": 0.026833940722312884,
+            "Change": -0.10999848404611473
+        },
+        {
+            "Site": "feedly.com",
+            "Visits": 0.02659418342614353,
+            "Change": 0.17018158380986045
+        },
+        {
+            "Site": "cloud.feedly.com",
+            "Visits": 0.024036905122216113,
+            "Change": null
+        }
+    ],
+    "ResultsCount": 10,
+    "TotalCount": 4880,
+    "Next": "http://api.similarweb.com/Site/cnn.com/v1/referrals?start=6-2013&end=5-2014&md=true&Format=JSON&UserKey=1b7c88e11fa6f16c1129f6f4baa5c007&page=2"
+}
