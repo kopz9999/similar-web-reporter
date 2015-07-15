@@ -1,0 +1,45 @@
+<!-- Use a templated HTML printing scriptlet to import common stylesheet. -->
+<?!= HtmlService.createHtmlOutputFromFile('Stylesheet').getContent(); ?>
+
+<!-- Below is the HTML code that defines the sidebar element structure. -->
+<div class="sidebar branding-below">
+  <p>
+  In order to format SimilarWeb data, please verify form
+  and click on <a href="#sidebar-format-button"> Format Report </a>
+  </p>
+  <div class="block form-group" id="search-term-column-block">
+    <label for="search-term-column-value">Search Term Column Position</label>
+    <input id="search-term-column-value" value="1">
+  </div>
+
+  <div class="block form-group" id="visits-column-block">
+    <label for="visits-column-value">Visits Column Position</label>
+    <input id="visits-column-value" value="2">
+  </div>
+
+  <div class="block form-group" id="iteration-blocks-block">
+    <label for="iteration-blocks-value">Iteration Blocks</label>
+    <input id="iteration-blocks-value" value="3">
+  </div>
+
+  <div class="block form-group" id="results-location-block">
+    <label for="results-location-value">Results Location</label>
+    <input id="results-location-value" value="A9">
+  </div>
+
+  <div class="block" id="sidebar-button-bar">
+    <button id="sidebar-format-button" class="action">Format Report</button>
+  </div>
+
+  <div id="sidebar-status"></div>
+</div>
+
+<!-- Enter sidebar bottom-branding below. -->
+<div class="sidebar bottom">
+  <img alt="Add-on logo" class="logo" width="25"
+      src="https://googledrive.com/host/0B0G1UdyJGrY6XzdjQWF4a1JYY1k/apps-script_2x.png">
+  <span class="gray branding-text">Spreadsheet Add-on Template by <a href="https://github.com/kopz9999">Kopz</a></span>
+</div>
+
+<!-- Use a templated HTML printing scriptlet to import JavaScript. -->
+<?!= HtmlService.createHtmlOutputFromFile('SidebarJavaScript').getContent(); ?>
