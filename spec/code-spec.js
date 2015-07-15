@@ -1,4 +1,4 @@
-var paks = require('../lib/word-document-handler');
+//var paks = require('../lib/word-document-handler');
 
 function helloWorld() {
   return "Hello world!";
@@ -6,6 +6,6 @@ function helloWorld() {
 
 describe("Hello world", function() {
   it("says hello", function() {
-    console.log(paks);
+    //console.log(paks);
   });
 });
