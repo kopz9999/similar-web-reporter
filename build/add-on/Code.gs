@@ -2,253 +2,8 @@
  * @OnlyCurrentDoc  Limits the script to only accessing the current spreadsheet.
  */
 
-/**
- * Application constants
- */
-
 var APP_TITLE = 'SimilarWeb Report Formatter';
 
-/**
- * Models
- */
-
-var Models = {}, Controllers = {};
-
-// Models.Domain
-
-Models.Domain = function(opts) {
-  this.name = opts.name;
-  this.domainReports = []
-};
-
-Models.Domain.prototype.addReport = function (report) {
-  this.domainReports.push(report);
-};
-
-// Models.DomainReport
-
-Models.DomainReport = function(opts) {
-  this.concept = opts.concept;
-  this.domainDatas = [];
-};
-
-Models.DomainReport.prototype.addDomainData = function (domainData) {
-  this.domainDatas.push(domainData);
-};
-
-// Models.SimilarWebConcept
-
-Models.SimilarWebConcept = function(opts) {
-  this.name = opts.name;
-  this.firstColumn = opts.firstColumn;
-  this.lastColumn = opts.lastColumn;
-};
-
-// Models.DomainData
-
-Models.DomainData = function(opts) {
-  this.searchTerm = opts.searchTerm;
-  this.visits = opts.visits;
-};
-
-// Models.FormData
-
-Models.FormData = function(opts) {
-  this.searchTermColumnValue = opts.searchTermColumnValue;
-  this.visitsColumnValue = opts.visitsColumnValue;
-  this.iterationBlocksValue = opts.iterationBlocksValue;
-  this.resultsLocation = opts.resultsLocation;
-  this.searchTermColumn = null;
-  this.visitsColumn = null;
-  this.iterationBlocks = null;
-  this.init();
-};
-
-Models.FormData.prototype.init = function () {
-  this.searchTermColumn = parseInt(this.searchTermColumnValue);
-  this.visitsColumn = parseInt( this.visitsColumnValue );
-  this.iterationBlocks = parseInt( this.iterationBlocksValue );
-};
-
-// Controllers.ReportFormatter
-
-Controllers.ReportFormatter = function(opts) {
-  this.spreadsheet = opts.spreadsheet;
-  this.formData = opts.formData;
-  this.domains = [];
-  this.concepts = [];
-  this.reportRows = null;
-  this.reportColumns = null;
-  this.init();
-};
-
-Controllers.ReportFormatter.prototype.init = function () {
-  this.initReportRows();
-  this.initReportColumns();
-  this.initConcepts();
-  this.fetchData();
-  this.writeReports();
-};
-
-Controllers.ReportFormatter.prototype.writeReports = function () {
-  var resultsRange = this.spreadsheet.getRange( this.formData.resultsLocation );
-  var startRow = resultsRange.getRow();
-  var startColumn = resultsRange.getColumn();
-  var columnLimit = null;
-  var domainPtr = null;
-  var domainTitleRange = null;
-  var domainReportPtr = null;
-  var searchTermTitleRange = null;
-  var visitsTitleRange = null;
-  var searchTermTitle = null;
-  var visitsTitle = null;
-  var searchTermReportColumn = null;
-  var visitsReportColumn = null;
-  var reportOffset = 1 + ( this.concepts.length * 2 );
-  var domainDataPtr = null;
-
-  columnLimit = startColumn + this.domains.length;
-  for (var i = 0, c = startColumn; i < this.domains.length; ++i, c+=reportOffset) {
-    domainPtr = this.domains[ i ];
-    domainTitleRange = this.spreadsheet.getRange( startRow, c );
-    domainTitleRange.setValue( "Domains" );
-    domainTitleRange.setFontWeight("bold");
-    this.spreadsheet.getRange(startRow + 1, c).setValue( domainPtr.name );
-    for (var j = 0, rc = c; j < domainPtr.domainReports.length; ++j, rc+=2) {
-      domainReportPtr = domainPtr.domainReports[j];
-      searchTermReportColumn = rc + 1;
-      visitsReportColumn = rc + 2;
-      searchTermTitleRange = this.spreadsheet
-                              .getRange(startRow, searchTermReportColumn);
-      visitsTitleRange = this.spreadsheet
-                            .getRange(startRow, visitsReportColumn);
-
-      searchTermTitle = domainReportPtr.concept.name + " : SearchTerm";
-      searchTermTitleRange.setValue( searchTermTitle );
-      searchTermTitleRange.setFontWeight("bold");
-
-      visitsTitle = domainReportPtr.concept.name + " : Visits";
-      visitsTitleRange.setValue( visitsTitle );
-      visitsTitleRange.setFontWeight("bold");
-
-      for (var k = 0, rr = null; k < domainReportPtr.domainDatas.length; ++k) {
-        domainDataPtr = domainReportPtr.domainDatas[k];
-        rr = startRow + k + 1;
-        this.spreadsheet.getRange(rr, searchTermReportColumn)
-          .setValue( domainDataPtr.searchTerm );
-        this.spreadsheet.getRange(rr, visitsReportColumn)
-          .setValue( domainDataPtr.visits );
-      }
-
-    }
-  }
-
-};
-
-Controllers.ReportFormatter.prototype.fetchData = function () {
-  var domainPtr = null;
-  var domainReportPtr = null;
-  var conceptPtr = null;
-  var domainDataPtr = null;
-  var searchTermValue = null;
-  var visitsValue = null;
-  var searchTermCurrentColumn = null;
-  var visitsCurrentColumn = null;
-
-  // Iterate rows
-  for (var i = 2; i <= this.reportRows ; ++i ) {
-    domainPtr = new Models.Domain({
-      name: this.spreadsheet.getRange(i, 1).getValue()
-    });
-    this.domains.push( domainPtr );
-    for (var j = 0; j < this.concepts.length; ++j) {
-      conceptPtr = this.concepts[j]
-      domainReportPtr = new Models.DomainReport({
-        concept: conceptPtr
-      });
-      domainPtr.domainReports.push(domainReportPtr);
-      for (var k = conceptPtr.firstColumn; k <= conceptPtr.lastColumn;
-        k+= this.formData.iterationBlocks) {
-          searchTermCurrentColumn = k + this.formData.searchTermColumn - 1;
-          visitsCurrentColumn = k + this.formData.visitsColumn - 1;
-          searchTermValue = this.spreadsheet.getRange(i,searchTermCurrentColumn)
-                              .getValue();
-          visitsValue = this.spreadsheet.getRange(i,visitsCurrentColumn)
-                              .getValue();
-          domainDataPtr = new Models.DomainData({
-            searchTerm: searchTermValue,
-            visits: visitsValue
-          });
-          domainReportPtr.domainDatas.push(domainDataPtr);
-      }
-    }
-  }
-
-
-};
-
-Controllers.ReportFormatter.prototype.initConcepts = function () {
-  var conceptName = this.getColumnConcept(1, 2);
-  var i = 0;
-  var conceptPtr = new Models.SimilarWebConcept({
-    name: conceptName,
-    firstColumn: 2
-  });
-  this.concepts.push( conceptPtr );
-  for (i = 2; i <= this.reportColumns; i+= this.formData.iterationBlocks) {
-    conceptName = this.getColumnConcept(1, i);
-    if ( conceptName != conceptPtr.name ) {
-      conceptPtr.lastColumn = i - 1;
-      conceptPtr = new Models.SimilarWebConcept({
-        name: conceptName,
-        firstColumn: i
-      });
-      this.concepts.push(conceptPtr);
-    }
-  }
-  conceptPtr.lastColumn = i - this.formData.iterationBlocks;
-};
-
-Controllers.ReportFormatter.prototype.getColumnConcept = function(row, column){
-  var colValuePtr = this.spreadsheet.getRange(row, column)
-                      .getValue().toString();
-  return colValuePtr.split(":")[0].trim();
-};
-
-Controllers.ReportFormatter.prototype.initReportRows = function () {
-  var rowValuePtr = null;
-  var lastRow = this.spreadsheet.getLastRow();
-  var i = 0;
-
-  for ( i = 1; i <= lastRow ; ++i ) {
-    rowValuePtr = this.spreadsheet.getRange(i, 1).getValue();
-    if ( rowValuePtr.toString().trim() == "" ) {
-      break;
-    }
-  }
-  this.reportRows = i - 1;
-};
-
-Controllers.ReportFormatter.prototype.initReportColumns = function () {
-  var colValuePtr = null;
-  var lastColumn = this.spreadsheet.getLastColumn();
-  var i = 0;
-
-  for ( i = 1; i <= lastColumn ; ++i ) {
-    colValuePtr = this.spreadsheet.getRange(1, i).getValue();
-    if ( colValuePtr.toString().trim() == "" ) {
-      break;
-    }
-  }
-  this.reportColumns = i - 1;
-};
-
-
-/**
- * Adds a custom menu with items to show the sidebar and dialog.
- *
- * @param {Object} e The event parameter for a simple onOpen trigger.
- */
 function onOpen(e) {
   SpreadsheetApp.getUi()
       .createAddonMenu()
@@ -256,20 +11,10 @@ function onOpen(e) {
       .addToUi();
 }
 
-/**
- * Runs when the add-on is installed; calls onOpen() to ensure menu creation and
- * any other initializion work is done immediately.
- *
- * @param {Object} e The event parameter for a simple onInstall trigger.
- */
 function onInstall(e) {
   onOpen(e);
 }
 
-/**
- * Opens a sidebar. The sidebar structure is described in the Sidebar.html
- * project file.
- */
 function showSidebar() {
   var ui = HtmlService.createTemplateFromFile('Sidebar')
       .evaluate()
@@ -277,30 +22,181 @@ function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(ui);
 }
 
-/*
- * App Logic
- */
-
-/**
- * Returns the value in the active cell.
- *
- * @return {String} The value of the active cell.
- */
 function formatSimilarWebReport(formData) {
-  var reportFormatter = new Controllers.ReportFormatter({
-    spreadsheet: SpreadsheetApp.getActiveSheet(),
-    formData: new Models.FormData(formData)
+  var formData = new SimilarWebReporter.Models.FormData({
+    domain: "cnn.com", includePaidKeywords: true,
+    includeOrganicKeywords: false, includeReferrals: false,
+    resultsValue: "10", startDateValue: "7-2014",
+    endDateValue: "6-2015", apiKey: "1b7c88e11fa6f16c1129f6f4baa5c007",
+    resultsLocation: "B1"
   });
-  //var x = new Models.Domain({});
-  /*
-  var lastRow = SpreadsheetApp.getActiveSheet().getMaxRows();
-
-
-  var cellx = SpreadsheetApp.getActiveSheet().getActiveCell();
-  cellx.setValue('x');
-
-  // Retrieve and return the information requested by the sidebar.
-  var cell = SpreadsheetApp.getActiveSheet().getActiveCell();
-  return cell.getValue();
-  */
+  var setting = new SimilarWebReporter.Models.Setting();
+  var processor = new SimilarWebReporter.Processor({
+    formData: formData,
+    setting: setting,
+    spreadsheet: SpreadsheetApp.getActiveSheet()
+  });
+  processor.processForm();
 }
+var exports = {};
+var SimilarWebReporter;
+(function (SimilarWebReporter) {
+    var Models;
+    (function (Models) {
+        // @DomainData
+        var DomainData = (function () {
+            function DomainData(opts) {
+                this.site = opts.site;
+                this.visits = opts.visits;
+                this.change = opts.change;
+            }
+            DomainData.prototype.getMatrix = function () {
+                return [this.site, this.visits, this.change];
+            };
+            return DomainData;
+        })();
+        Models.DomainData = DomainData;
+        // @FormData
+        var FormData = (function () {
+            function FormData(opts) {
+                this.domain = opts.domain;
+                this.includePaidKeywords = opts.includePaidKeywords;
+                this.includeOrganicKeywords = opts.includeOrganicKeywords;
+                this.includeReferrals = opts.includeReferrals;
+                this.resultsValue = opts.resultsValue;
+                this.startDateValue = opts.startDateValue;
+                this.endDateValue = opts.endDateValue;
+                this.apiKey = opts.apiKey;
+                this.displayModeValue = opts.displayModeValue;
+                this.resultsLocation = opts.resultsLocation;
+                this.init();
+            }
+            FormData.prototype.init = function () {
+                this.results = parseInt(this.resultsValue);
+                this.displayMode = parseInt(this.displayModeValue);
+            };
+            return FormData;
+        })();
+        Models.FormData = FormData;
+        // @Setting
+        var Setting = (function () {
+            function Setting() {
+                this.urlTemplate = "http://api.similarweb.com/Site/{domain}/v1/{api}?" + "start={startDate}&end={endDate}&Format=JSON&" + "page={results}&UserKey={apiKey}";
+                this.apis = {
+                    referrals: 'referrals',
+                    paidSearch: 'paidsearch',
+                    organicSearch: 'orgsearch'
+                };
+                this.displayModes = {
+                    horizontal: 0,
+                    vertical: 1
+                };
+                this.lang = {
+                    referrals: 'Referrals',
+                    paidSearch: 'Paid Search',
+                    organicSearch: 'Organic Search',
+                    domains: 'Domains',
+                    visits: 'Visits',
+                    change: 'Change'
+                };
+            }
+            return Setting;
+        })();
+        Models.Setting = Setting;
+        // @Report
+        var Report = (function () {
+            function Report(opts) {
+                this.identity = opts.identity;
+                this.processor = opts.processor;
+                this.name = opts.name;
+                this.domainDatas = [];
+            }
+            Report.prototype.getMatrix = function () {
+                var matrix = [];
+                var headers = [this.processor.setting.lang['domains'], this.name + " : " + this.processor.setting.lang['visits'], this.name + " : " + this.processor.setting.lang['change']];
+                matrix.push(headers);
+                this.domainDatas.forEach(function (dd) {
+                    matrix.push(dd.getMatrix());
+                });
+                return matrix;
+            };
+            return Report;
+        })();
+        Models.Report = Report;
+    })(Models = SimilarWebReporter.Models || (SimilarWebReporter.Models = {}));
+    var Processor = (function () {
+        function Processor(opts) {
+            this.formData = opts.formData;
+            this.setting = opts.setting;
+            this.spreadsheet = opts.spreadsheet;
+            this.reports = [];
+        }
+        Processor.prototype.buildURL = function (api) {
+            return this.setting.urlTemplate.replace(/\{domain\}/, this.formData.domain).replace(/\{api\}/, api).replace(/\{startDate\}/, this.formData.startDateValue).replace(/\{endDate\}/, this.formData.endDateValue).replace(/\{results\}/, this.formData.results.toString()).replace(/\{apiKey\}/, this.formData.apiKey);
+        };
+        Processor.prototype.processResponse = function (reportIdentity, response) {
+            var data = JSON.parse(response);
+            var report = new SimilarWebReporter.Models.Report({
+                identity: reportIdentity,
+                name: this.setting.lang[reportIdentity],
+                processor: this
+            });
+            data["Data"].forEach(function (d) {
+                report.domainDatas.push(new SimilarWebReporter.Models.DomainData({
+                    site: d['Site'],
+                    visits: d['Visits'],
+                    change: d['Change']
+                }));
+            });
+            this.reports.push(report);
+        };
+        Processor.prototype.processForm = function () {
+            var _self = this;
+            var apis = [];
+            if (this.formData.includeReferrals) {
+                apis.push(this.setting.apis['referrals']);
+            }
+            if (this.formData.includePaidKeywords) {
+                apis.push(this.setting.apis['paidSearch']);
+            }
+            if (this.formData.includeOrganicKeywords) {
+                apis.push(this.setting.apis['organicSearch']);
+            }
+            apis.forEach(function (a) {
+                _self.storeReport(a);
+            });
+            this.processReports();
+        };
+        Processor.prototype.storeReport = function (api) {
+            var url = this.buildURL(api);
+            var response = UrlFetchApp.fetch(url);
+            this.processResponse(api, response.getContentText());
+        };
+        Processor.prototype.processReports = function () {
+            var resultsRange = this.spreadsheet.getRange(this.formData.resultsLocation);
+            var row = resultsRange.getRow();
+            var column = resultsRange.getColumn();
+            var report = null;
+            for (var i = 0; i < this.reports.length; ++i) {
+                report = this.reports[i];
+                this.writeReport(row, column, report);
+                if (this.formData.displayMode == this.setting.displayModes['horizontal']) {
+                    column += 4;
+                }
+                else {
+                    row += report.domainDatas.length + 2;
+                }
+            }
+        };
+        Processor.prototype.writeReport = function (row, column, report) {
+            var matrix = report.getMatrix();
+            var range = this.spreadsheet.getRange(row, column, matrix.length, matrix[0].length);
+            //var headersRange = this.spreadsheet.getRange(row, column, 0, matrix[0].length);
+            //range.setValues(matrix);
+            range.activate();
+            //headersRange.setFontWeight("bold");
+        };
+        return Processor;
+    })();
+    SimilarWebReporter.Processor = Processor;
+})(SimilarWebReporter = exports.SimilarWebReporter || (exports.SimilarWebReporter = {}));

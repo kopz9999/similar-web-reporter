@@ -18,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/kopz9999/similar-web-reporter/issues"
   },
+  "dependencies": {
+    "typescript-require": ">= 0.2.9"
+  },
   "homepage": "https://github.com/kopz9999/similar-web-reporter"
 }
