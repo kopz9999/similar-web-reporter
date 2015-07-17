@@ -1,3 +1,3 @@
 declare class UrlFetchApp {
-  fetch(url:string):any;
+  static fetch(url:string):any;
 }

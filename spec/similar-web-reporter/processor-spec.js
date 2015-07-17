@@ -54,7 +54,7 @@ describe("SimilarWebReporter.Processor", function() {
       processor.processResponse( 'referrals', buf );
       domainData = processor.reports[0].domainDatas[0];
 
-      expect(domainData.site).toEqual('drudgereport.com');
+      expect(domainData.concept).toEqual('drudgereport.com');
       expect(domainData.visits).toEqual(0.12102778215374196);
       expect(domainData.change).toEqual(0.20817320969507458);
     });
@@ -75,7 +75,7 @@ describe("SimilarWebReporter.Processor", function() {
       domainMatrix = matrix[1];
       expect(matrix.length).toEqual( 11 );
       expect(domainMatrix.length).toEqual( 3 );
-      expect(headers[0]).toEqual('Domains');
+      expect(headers[0]).toEqual('Sites');
       expect(headers[1]).toEqual('Referrals : Visits');
       expect(headers[2]).toEqual('Referrals : Change');
       expect(domainMatrix[0]).toEqual('drudgereport.com');

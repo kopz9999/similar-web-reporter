@@ -1,4 +1,9 @@
+<link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/themes/cupertino/jquery-ui.css">
 <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.9.1/jquery-ui.min.js"></script>
+<script src="http://jqueryvalidation.org/files/dist/jquery.validate.min.js"></script>
+<script src="http://jqueryvalidation.org/files/dist/additional-methods.min.js"></script>
+
 <script>
 
 	/**
@@ -6,55 +11,115 @@
    */
   $(function() {
     // Assign handler functions to sidebar elements here, if needed.
-    $('#sidebar-format-button').click(onFormatClick);
+    initDatePickers();
+    initForm();
   });
 
-  /**
-   * Calls the server to retrieve information from the sheet.
-   * Gets the value in the active cell, which is then placed in the
-   * sidebar text field.
-   */
-  function onFormatClick() {
-		var formData = {
-			searchTermColumnValue: $('#search-term-column-value').val(),
-			visitsColumnValue: $('#visits-column-value').val(),
-			iterationBlocksValue: $('#iteration-blocks-value').val(),
-			resultsLocation: $('#results-location-value').val()
-		};
-    this.disabled = true;
-    // Gather any information that needs to be sent to the server here.
+  function initForm() {
+    var wizard = $('#wizard');
+    wizard.validate({
+      rules: {
+        'domain': 'required',
+        'start-date-value': 'required',
+        'end-date-value' : 'required',
+        'results-location': 'required',
+        'api-key' : 'required',
+        'results-number-value': {
+          required: true,
+          number: true
+        }
+      },
+      messages: {
+        firstname: "Please enter your first name",
+        lastname: "Please enter your last name",
+        password: {
+          required: "Please provide a password",
+          minlength: "Your password must be at least 5 characters long"
+        },
+        email: "Please enter a valid email address",
+        agree: "Please accept our policy"
+      },
+      submitHandler: function() {
+        sendData();
+      }
+    });
 
-    // Send the value to the server and handle the response.
+  };
+
+  function initDatePickers() {
+    var startDate = new Date();
+    var endDate = new Date();
+    startDate.setDate(startDate.getDate() - 180);
+    endDate.setDate(endDate.getDate() - 32);
+
+    $('#start-date-value, #end-date-value').datepicker({
+      dateFormat: 'mm-yy',
+      changeMonth: true,
+      changeYear: true,
+      showButtonPanel: true,
+      onClose: function(dateText, inst) {
+        var month = inst.dpDiv.find(".ui-datepicker-month :selected").val();
+        var year = inst.dpDiv.find(".ui-datepicker-year :selected").val();
+        $(this).datepicker('setDate', new Date(year, month, 1));
+      },
+      beforeShow : function(input, inst) {
+        var datestr, date, month, year;
+        if ((datestr = $(this).val()).length > 0) {
+          month = datestr.substring(0, 2);
+          year = datestr.substring(3, 7);
+          date = new Date(parseInt(year), parseInt(month) - 1, 1);
+          var obj = $(this);
+          setTimeout(function(){
+            obj.datepicker('setDate', date);
+          }, 100);
+        }
+      }
+    });
+    $('#start-date-value').datepicker('setDate', startDate);
+    $('#end-date-value').datepicker('setDate', endDate);
+  };
+
+  function sendData() {
+    var wizard = $('#wizard');
+    var loader = $('#loader');
+    var button = wizard.find('#sidebar-button-bar button')[0];
+    var formData = {
+      domain: wizard.find('#domain').val(),
+      includePaidSearch: wizard.find('#paid-search').is(':checked'),
+      includeOrganicKeywords: wizard.find('#organic-keywords').is(':checked'),
+      includeReferrals: wizard.find('#referrals-keywords').is(':checked'),
+      resultsValue: wizard.find('#results-number-value').val(),
+      startDateValue: wizard.find('#start-date-value').val(),
+      endDateValue: wizard.find('#end-date-value').val(),
+      apiKey: wizard.find('#api-key').val(),
+      displayModeValue: wizard.find("[name='display-mode-value']").val(),
+      resultsLocation: wizard.find('#results-location').val()
+		};
+    loader.removeClass('hidden');
+    button.disabled = true;
     google.script.run
         .withSuccessHandler(
           function(msg, element) {
-            // Respond to success conditions here.
-            //$('#sidebar-value').val(msg);
-            showStatus('Report formatted successfully.');
-            element.disabled = false;
+            loader.addClass('hidden');
+            $('#sidebar-status').removeClass('error');
+            showStatus('Report created successfully.');
+            button.disabled = false;
           })
         .withFailureHandler(
           function(msg, element) {
-            // Respond to failure conditions here.
+            loader.addClass('hidden');
             showStatus(msg, 'error');
-            element.disabled = false;
+            button.disabled = false;
           })
         .withUserObject(this)
-        .formatSimilarWebReport(formData);
-  }
+        .createSimilarWebReport(formData);
+  };
 
-  /**
-   * Displays the given status message in the sidebar.
-   *
-   * @param {String} msg The status message to display.
-   * @param {String} classId The message type (class id) that the message
-   *   should be displayed as.
-   */
   function showStatus(msg, classId) {
     $('#sidebar-status').removeClass().html(msg);
     if (classId) {
       $('#sidebar-status').addClass(classId);
     }
-  }
+  };
 
 </script>

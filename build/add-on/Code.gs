@@ -3,6 +3,7 @@
  */
 
 var APP_TITLE = 'SimilarWeb Report Formatter';
+var exports = {};
 
 function onOpen(e) {
   SpreadsheetApp.getUi()
@@ -22,14 +23,17 @@ function showSidebar() {
   SpreadsheetApp.getUi().showSidebar(ui);
 }
 
-function formatSimilarWebReport(formData) {
+function createSimilarWebReport(params) {
+  /*
   var formData = new SimilarWebReporter.Models.FormData({
-    domain: "cnn.com", includePaidKeywords: true,
+    domain: "cnn.com", includePaidSearch: true,
     includeOrganicKeywords: false, includeReferrals: false,
-    resultsValue: "10", startDateValue: "7-2014",
+    resultsValue: "10", startDateValue: "3-2015",
     endDateValue: "6-2015", apiKey: "1b7c88e11fa6f16c1129f6f4baa5c007",
     resultsLocation: "B1"
   });
+  */
+  var formData = new SimilarWebReporter.Models.FormData(params);
   var setting = new SimilarWebReporter.Models.Setting();
   var processor = new SimilarWebReporter.Processor({
     formData: formData,
@@ -38,7 +42,8 @@ function formatSimilarWebReport(formData) {
   });
   processor.processForm();
 }
-var exports = {};
+
+///<reference path='url-fetch-app.d.ts'/>
 var SimilarWebReporter;
 (function (SimilarWebReporter) {
     var Models;
@@ -46,12 +51,12 @@ var SimilarWebReporter;
         // @DomainData
         var DomainData = (function () {
             function DomainData(opts) {
-                this.site = opts.site;
+                this.concept = opts.concept;
                 this.visits = opts.visits;
                 this.change = opts.change;
             }
             DomainData.prototype.getMatrix = function () {
-                return [this.site, this.visits, this.change];
+                return [this.concept, this.visits, this.change];
             };
             return DomainData;
         })();
@@ -60,7 +65,7 @@ var SimilarWebReporter;
         var FormData = (function () {
             function FormData(opts) {
                 this.domain = opts.domain;
-                this.includePaidKeywords = opts.includePaidKeywords;
+                this.includePaidSearch = opts.includePaidSearch;
                 this.includeOrganicKeywords = opts.includeOrganicKeywords;
                 this.includeReferrals = opts.includeReferrals;
                 this.resultsValue = opts.resultsValue;
@@ -93,9 +98,10 @@ var SimilarWebReporter;
                 };
                 this.lang = {
                     referrals: 'Referrals',
-                    paidSearch: 'Paid Search',
-                    organicSearch: 'Organic Search',
-                    domains: 'Domains',
+                    paidsearch: 'Paid Search',
+                    orgsearch: 'Organic Search',
+                    sites: 'Sites',
+                    searchTerm: 'SearchTerm',
                     visits: 'Visits',
                     change: 'Change'
                 };
@@ -113,7 +119,15 @@ var SimilarWebReporter;
             }
             Report.prototype.getMatrix = function () {
                 var matrix = [];
-                var headers = [this.processor.setting.lang['domains'], this.name + " : " + this.processor.setting.lang['visits'], this.name + " : " + this.processor.setting.lang['change']];
+                var conceptHeader = null;
+                var headers = null;
+                if (this.identity == this.processor.setting.apis['referrals']) {
+                    conceptHeader = this.processor.setting.lang['sites'];
+                }
+                else {
+                    conceptHeader = this.processor.setting.lang['searchTerm'];
+                }
+                headers = [conceptHeader, this.name + " : " + this.processor.setting.lang['visits'], this.name + " : " + this.processor.setting.lang['change']];
                 matrix.push(headers);
                 this.domainDatas.forEach(function (dd) {
                     matrix.push(dd.getMatrix());
@@ -143,7 +157,7 @@ var SimilarWebReporter;
             });
             data["Data"].forEach(function (d) {
                 report.domainDatas.push(new SimilarWebReporter.Models.DomainData({
-                    site: d['Site'],
+                    concept: d['Site'] || d['SearchTerm'],
                     visits: d['Visits'],
                     change: d['Change']
                 }));
@@ -156,7 +170,7 @@ var SimilarWebReporter;
             if (this.formData.includeReferrals) {
                 apis.push(this.setting.apis['referrals']);
             }
-            if (this.formData.includePaidKeywords) {
+            if (this.formData.includePaidSearch) {
                 apis.push(this.setting.apis['paidSearch']);
             }
             if (this.formData.includeOrganicKeywords) {
@@ -191,10 +205,9 @@ var SimilarWebReporter;
         Processor.prototype.writeReport = function (row, column, report) {
             var matrix = report.getMatrix();
             var range = this.spreadsheet.getRange(row, column, matrix.length, matrix[0].length);
-            //var headersRange = this.spreadsheet.getRange(row, column, 0, matrix[0].length);
-            //range.setValues(matrix);
-            range.activate();
-            //headersRange.setFontWeight("bold");
+            var headersRange = this.spreadsheet.getRange(row, column, 1, matrix[0].length);
+            range.setValues(matrix);
+            headersRange.setFontWeight("bold");
         };
         return Processor;
     })();

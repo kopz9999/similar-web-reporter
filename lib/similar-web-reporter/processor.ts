@@ -4,22 +4,22 @@ export module SimilarWebReporter {
   export module Models {
     // @DomainData
     export class DomainData {
-      site: string;
+      concept: string;
       visits: number;
       change: number;
       constructor(opts: any) {
-        this.site = opts.site;
+        this.concept = opts.concept;
         this.visits = opts.visits;
         this.change = opts.change;
       }
       getMatrix() {
-        return [ this.site, this.visits, this.change ];
+        return [ this.concept, this.visits, this.change ];
       }
     }
     // @FormData
     export class FormData {
       domain: string;
-      includePaidKeywords: boolean;
+      includePaidSearch: boolean;
       includeOrganicKeywords: boolean;
       includeReferrals: boolean;
       resultsValue: string;
@@ -32,7 +32,7 @@ export module SimilarWebReporter {
       resultsLocation: string;
       constructor(opts: any) {
         this.domain = opts.domain;
-        this.includePaidKeywords = opts.includePaidKeywords;
+        this.includePaidSearch = opts.includePaidSearch;
         this.includeOrganicKeywords = opts.includeOrganicKeywords;
         this.includeReferrals = opts.includeReferrals;
         this.resultsValue = opts.resultsValue;
@@ -69,9 +69,10 @@ export module SimilarWebReporter {
         };
         this.lang = {
           referrals: 'Referrals',
-          paidSearch: 'Paid Search',
-          organicSearch: 'Organic Search',
-          domains: 'Domains',
+          paidsearch: 'Paid Search',
+          orgsearch: 'Organic Search',
+          sites: 'Sites',
+          searchTerm: 'SearchTerm',
           visits: 'Visits',
           change: 'Change'
         };
@@ -91,7 +92,14 @@ export module SimilarWebReporter {
       }
       getMatrix() {
         var matrix = [];
-        var headers = [ this.processor.setting.lang['domains'],
+        var conceptHeader = null;
+        var headers = null;
+        if (this.identity == this.processor.setting.apis['referrals']) {
+          conceptHeader = this.processor.setting.lang['sites'];
+        } else{
+          conceptHeader = this.processor.setting.lang['searchTerm'];
+        }
+        headers = [ conceptHeader,
           this.name + " : " + this.processor.setting.lang['visits'],
           this.name + " : " + this.processor.setting.lang['change'] ];
         matrix.push( headers );
@@ -134,7 +142,7 @@ export module SimilarWebReporter {
       data["Data"].forEach(d => {
         report.domainDatas.push(
           new SimilarWebReporter.Models.DomainData({
-            site: d['Site'] || d['SearchTerm'],
+            concept: d['Site'] || d['SearchTerm'],
             visits: d['Visits'],
             change: d['Change']
           })
@@ -148,7 +156,7 @@ export module SimilarWebReporter {
       if ( this.formData.includeReferrals ) {
         apis.push( this.setting.apis['referrals'] );
       }
-      if ( this.formData.includePaidKeywords ) {
+      if ( this.formData.includePaidSearch ) {
         apis.push( this.setting.apis['paidSearch'] );
       }
       if ( this.formData.includeOrganicKeywords ) {
@@ -186,7 +194,7 @@ export module SimilarWebReporter {
       var matrix = report.getMatrix();
       var range = this.spreadsheet.getRange(row, column, matrix.length,
         matrix[0].length );
-      var headersRange = this.spreadsheet.getRange(row, column, 0,
+      var headersRange = this.spreadsheet.getRange(row, column, 1,
         matrix[0].length );
       range.setValues(matrix);
       headersRange.setFontWeight("bold");
