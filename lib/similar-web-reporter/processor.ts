@@ -54,10 +54,12 @@ export module SimilarWebReporter {
       apis: Object;
       lang: Object;
       displayModes: Object;
+      pageSize: number;
       constructor() {
+        this.pageSize = 10;
         this.urlTemplate = "http://api.similarweb.com/Site/{domain}/v1/{api}?" +
           "start={startDate}&end={endDate}&Format=JSON&"+
-          "page={results}&UserKey={apiKey}";
+          "page={page}&UserKey={apiKey}";
         this.apis = {
           referrals: 'referrals',
           paidSearch: 'paidsearch',
@@ -83,12 +85,49 @@ export module SimilarWebReporter {
       identity: string;
       name: string;
       processor: SimilarWebReporter.Processor;
+      iterations: number;
+      reachableResults: number;
       domainDatas:Array<SimilarWebReporter.Models.DomainData>;
       constructor(opts) {
         this.identity = opts.identity;
         this.processor = opts.processor;
-        this.name = opts.name;
+        this.name = this.processor.setting.lang[this.identity];
+        this.iterations = null;
+        this.reachableResults = null;
         this.domainDatas = [];
+      }
+      requestData() {
+        var objectResponse = this.getNextResponse(1);
+        this.determineIterations(objectResponse['TotalCount']);
+        this.consumeData( objectResponse["Data"] );
+        for ( var i = 2; i <= this.iterations; ++i ) {
+          objectResponse = this.getNextResponse(i);
+          this.consumeData( objectResponse["Data"] );
+        }
+      }
+      getNextResponse(page:number) {
+        var url = this.processor.buildURL(this.identity, page);
+        var response = UrlFetchApp.fetch( url );
+        var objectResponse = JSON.parse(response.getContentText());
+        return objectResponse;
+      }
+      consumeData( datas ) {
+        for (var i = 0, data = datas[0]; i < datas.length; data = datas[++i]) {
+          if ( this.domainDatas.length >= this.reachableResults ) break;
+          this.domainDatas.push(
+            new SimilarWebReporter.Models.DomainData({
+              concept: data['Site'] || data['SearchTerm'],
+              visits: data['Visits'],
+              change: data['Change']
+            })
+          );
+        }
+      }
+      determineIterations(totalCount:number) {
+        var results = this.processor.formData.results;
+        var pageSize = this.processor.setting.pageSize;
+        this.reachableResults = results > totalCount ? totalCount : results;
+        this.iterations = Math.ceil( this.reachableResults / pageSize );
       }
       getMatrix() {
         var matrix = [];
@@ -113,42 +152,24 @@ export module SimilarWebReporter {
 
 
   export class Processor {
-    private formData: SimilarWebReporter.Models.FormData;
     private spreadsheet: any;
     private reports: Array<SimilarWebReporter.Models.Report>;
     setting: SimilarWebReporter.Models.Setting;
+    formData: SimilarWebReporter.Models.FormData;
     constructor(opts: any) {
       this.formData = opts.formData;
       this.setting = opts.setting;
       this.spreadsheet = opts.spreadsheet;
       this.reports = [];
     }
-    buildURL(api:string) {
+    buildURL(api:string, page: number) {
       return this.setting.urlTemplate
         .replace(/\{domain\}/, this.formData.domain)
         .replace(/\{api\}/, api)
         .replace(/\{startDate\}/, this.formData.startDateValue)
         .replace(/\{endDate\}/, this.formData.endDateValue)
-        .replace(/\{results\}/, this.formData.results.toString())
+        .replace(/\{page\}/, page.toString())
         .replace(/\{apiKey\}/, this.formData.apiKey);
-    }
-    processResponse(reportIdentity: string,response: string) {
-      var data = JSON.parse(response);
-      var report = new SimilarWebReporter.Models.Report({
-        identity: reportIdentity,
-        name: this.setting.lang[reportIdentity],
-        processor: this
-      });
-      data["Data"].forEach(d => {
-        report.domainDatas.push(
-          new SimilarWebReporter.Models.DomainData({
-            concept: d['Site'] || d['SearchTerm'],
-            visits: d['Visits'],
-            change: d['Change']
-          })
-        );
-      });
-      this.reports.push( report );
     }
     processForm(){
       var _self = this;
@@ -163,14 +184,17 @@ export module SimilarWebReporter {
         apis.push( this.setting.apis['organicSearch'] );
       }
       apis.forEach( a => {
-        _self.storeReport(a);
+        _self.initReport(a);
       });
       this.processReports();
     }
-    storeReport(api: string){
-      var url = this.buildURL(api);
-      var response = UrlFetchApp.fetch(url);
-      this.processResponse( api, response.getContentText() );
+    initReport(api:string) {
+      var report = new SimilarWebReporter.Models.Report({
+        identity: api,
+        processor: this
+      });
+      report.requestData();
+      this.reports.push( report );
     }
     processReports(){
       var resultsRange = this.spreadsheet

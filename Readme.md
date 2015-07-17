@@ -5,11 +5,13 @@ SimilarWeb Api.
 
 ## Installation
 
-Work in progress
+Compile SimilarWebReporter namespace into Code.gs.
 
 ## Tests
 
-Work in progress
+To run tests execute the following command:
+
+npm test
 
 ## License
 

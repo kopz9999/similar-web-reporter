@@ -19,9 +19,9 @@ describe("SimilarWebReporter.Processor", function() {
         formData: formData,
         setting: setting
       });
-      expect(processor.buildURL('referrals'))
+      expect(processor.buildURL('referrals', 1))
         .toEqual('http://api.similarweb.com/Site/cnn.com/v1/referrals?'+
-          'start=6-2013&end=5-2014&Format=JSON&page=10&'+
+          'start=6-2013&end=5-2014&Format=JSON&page=1&'+
           'UserKey=8743b52063cd84097a65d1633f5c74f5');
     });
   });
@@ -34,13 +34,16 @@ describe("SimilarWebReporter.Processor", function() {
         formData: Helper.defaultFormData(),
         setting: setting
       });
-      var report = null;
-      processor.processResponse( 'referrals', buf );
-      report = processor.reports[0];
-
+      var report = new SimilarWebReporter.Models.Report({
+        identity: 'referrals',
+        processor: processor
+      });
+      var objectResponse = JSON.parse( buf );
+      report.reachableResults = 7;
+      report.consumeData( objectResponse['Data'] );
       expect(report.identity).toEqual('referrals');
       expect(report.name).toEqual('Referrals');
-      expect(report.domainDatas.length).toEqual(10);
+      expect(report.domainDatas.length).toEqual(7);
     });
     it("creates a valid domain data", function(){
       var buf = fs.readFileSync("./spec/fixtures/sample-response.json",
@@ -50,10 +53,15 @@ describe("SimilarWebReporter.Processor", function() {
         formData: Helper.defaultFormData(),
         setting: setting
       });
+      var report = new SimilarWebReporter.Models.Report({
+        identity: 'referrals',
+        processor: processor
+      });
+      var objectResponse = JSON.parse( buf );
       var domainData = null;
-      processor.processResponse( 'referrals', buf );
-      domainData = processor.reports[0].domainDatas[0];
-
+      report.reachableResults = 10;
+      report.consumeData( objectResponse['Data'] );
+      domainData = report.domainDatas[0];
       expect(domainData.concept).toEqual('drudgereport.com');
       expect(domainData.visits).toEqual(0.12102778215374196);
       expect(domainData.change).toEqual(0.20817320969507458);
@@ -66,11 +74,19 @@ describe("SimilarWebReporter.Processor", function() {
         formData: Helper.defaultFormData(),
         setting: setting
       });
+      var report = new SimilarWebReporter.Models.Report({
+        identity: 'referrals',
+        processor: processor
+      });
+      var objectResponse = JSON.parse( buf );
+      var domainData = null;
       var matrix = null;
       var domainMatrix = null;
       var headers = null;
-      processor.processResponse( 'referrals', buf );
-      matrix = processor.reports[0].getMatrix();
+
+      report.reachableResults = 10;
+      report.consumeData( objectResponse['Data'] );
+      matrix = report.getMatrix();
       headers = matrix[0];
       domainMatrix = matrix[1];
       expect(matrix.length).toEqual( 11 );
@@ -81,6 +97,28 @@ describe("SimilarWebReporter.Processor", function() {
       expect(domainMatrix[0]).toEqual('drudgereport.com');
       expect(domainMatrix[1]).toEqual(0.12102778215374196);
       expect(domainMatrix[2]).toEqual(0.20817320969507458);
+    });
+
+    it("determines iterations", function(){
+      var setting = new SimilarWebReporter.Models.Setting();
+      var formData = Helper.defaultFormData();
+      formData.results = 24;
+      var processor = new SimilarWebReporter.Processor({
+        formData: formData,
+        setting: setting
+      });
+      var report = new SimilarWebReporter.Models.Report({
+        identity: 'referrals',
+        processor: processor
+      });
+
+      report.determineIterations( 30 );
+      expect(report.reachableResults).toEqual(24);
+      expect(report.iterations).toEqual(3);
+
+      report.determineIterations( 20 );
+      expect(report.reachableResults).toEqual(20);
+      expect(report.iterations).toEqual(2);
     });
   })
 

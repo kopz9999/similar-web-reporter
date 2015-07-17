@@ -86,7 +86,8 @@ var SimilarWebReporter;
         // @Setting
         var Setting = (function () {
             function Setting() {
-                this.urlTemplate = "http://api.similarweb.com/Site/{domain}/v1/{api}?" + "start={startDate}&end={endDate}&Format=JSON&" + "page={results}&UserKey={apiKey}";
+                this.pageSize = 10;
+                this.urlTemplate = "http://api.similarweb.com/Site/{domain}/v1/{api}?" + "start={startDate}&end={endDate}&Format=JSON&" + "page={page}&UserKey={apiKey}";
                 this.apis = {
                     referrals: 'referrals',
                     paidSearch: 'paidsearch',
@@ -114,9 +115,43 @@ var SimilarWebReporter;
             function Report(opts) {
                 this.identity = opts.identity;
                 this.processor = opts.processor;
-                this.name = opts.name;
+                this.name = this.processor.setting.lang[this.identity];
+                this.iterations = null;
+                this.reachableResults = null;
                 this.domainDatas = [];
             }
+            Report.prototype.requestData = function () {
+                var objectResponse = this.getNextResponse(1);
+                this.determineIterations(objectResponse['TotalCount']);
+                this.consumeData(objectResponse["Data"]);
+                for (var i = 2; i <= this.iterations; ++i) {
+                    objectResponse = this.getNextResponse(i);
+                    this.consumeData(objectResponse["Data"]);
+                }
+            };
+            Report.prototype.getNextResponse = function (page) {
+                var url = this.processor.buildURL(this.identity, page);
+                var response = UrlFetchApp.fetch(url);
+                var objectResponse = JSON.parse(response.getContentText());
+                return objectResponse;
+            };
+            Report.prototype.consumeData = function (datas) {
+                for (var i = 0, data = datas[0]; i < datas.length; data = datas[++i]) {
+                    if (this.domainDatas.length >= this.reachableResults)
+                        break;
+                    this.domainDatas.push(new SimilarWebReporter.Models.DomainData({
+                        concept: data['Site'] || data['SearchTerm'],
+                        visits: data['Visits'],
+                        change: data['Change']
+                    }));
+                }
+            };
+            Report.prototype.determineIterations = function (totalCount) {
+                var results = this.processor.formData.results;
+                var pageSize = this.processor.setting.pageSize;
+                this.reachableResults = results > totalCount ? totalCount : results;
+                this.iterations = Math.ceil(this.reachableResults / pageSize);
+            };
             Report.prototype.getMatrix = function () {
                 var matrix = [];
                 var conceptHeader = null;
@@ -145,24 +180,8 @@ var SimilarWebReporter;
             this.spreadsheet = opts.spreadsheet;
             this.reports = [];
         }
-        Processor.prototype.buildURL = function (api) {
-            return this.setting.urlTemplate.replace(/\{domain\}/, this.formData.domain).replace(/\{api\}/, api).replace(/\{startDate\}/, this.formData.startDateValue).replace(/\{endDate\}/, this.formData.endDateValue).replace(/\{results\}/, this.formData.results.toString()).replace(/\{apiKey\}/, this.formData.apiKey);
-        };
-        Processor.prototype.processResponse = function (reportIdentity, response) {
-            var data = JSON.parse(response);
-            var report = new SimilarWebReporter.Models.Report({
-                identity: reportIdentity,
-                name: this.setting.lang[reportIdentity],
-                processor: this
-            });
-            data["Data"].forEach(function (d) {
-                report.domainDatas.push(new SimilarWebReporter.Models.DomainData({
-                    concept: d['Site'] || d['SearchTerm'],
-                    visits: d['Visits'],
-                    change: d['Change']
-                }));
-            });
-            this.reports.push(report);
+        Processor.prototype.buildURL = function (api, page) {
+            return this.setting.urlTemplate.replace(/\{domain\}/, this.formData.domain).replace(/\{api\}/, api).replace(/\{startDate\}/, this.formData.startDateValue).replace(/\{endDate\}/, this.formData.endDateValue).replace(/\{page\}/, page.toString()).replace(/\{apiKey\}/, this.formData.apiKey);
         };
         Processor.prototype.processForm = function () {
             var _self = this;
@@ -177,14 +196,17 @@ var SimilarWebReporter;
                 apis.push(this.setting.apis['organicSearch']);
             }
             apis.forEach(function (a) {
-                _self.storeReport(a);
+                _self.initReport(a);
             });
             this.processReports();
         };
-        Processor.prototype.storeReport = function (api) {
-            var url = this.buildURL(api);
-            var response = UrlFetchApp.fetch(url);
-            this.processResponse(api, response.getContentText());
+        Processor.prototype.initReport = function (api) {
+            var report = new SimilarWebReporter.Models.Report({
+                identity: api,
+                processor: this
+            });
+            report.requestData();
+            this.reports.push(report);
         };
         Processor.prototype.processReports = function () {
             var resultsRange = this.spreadsheet.getRange(this.formData.resultsLocation);
